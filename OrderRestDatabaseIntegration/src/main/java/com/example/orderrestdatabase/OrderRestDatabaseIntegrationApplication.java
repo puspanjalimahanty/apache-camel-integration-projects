@@ -1,0 +1,13 @@
+package com.example.orderrestdatabase;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class OrderRestDatabaseIntegrationApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(OrderRestDatabaseIntegrationApplication.class, args);
+	}
+
+}
