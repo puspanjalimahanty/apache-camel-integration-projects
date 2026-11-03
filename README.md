@@ -187,3 +187,163 @@ Returns the order ID, correlation ID, current status, timestamps, and error deta
 - Partitions: 3
 - Replication Factor: 1
 - Message Format: JSON
+
+
+# 3.File-to-Database Integration Using Apache Camel
+
+## Overview
+
+This project demonstrates a file-based order integration using **Apache Camel and Spring Boot**. Camel periodically polls an incoming directory for CSV order files, validates the records, prevents duplicate orders, and persists valid orders into an H2 database.
+
+The application also provides REST APIs to retrieve stored orders and includes error handling, file movement, and application health monitoring.
+
+## Scenario
+
+An e-commerce system receives order data from external systems in CSV format. Apache Camel reads the incoming files, converts each record into a Java object, validates the order details, and saves valid orders into the database.
+
+Invalid records are handled appropriately, while processed files are moved to the corresponding directories.
+
+## Integration Flow
+
+```text
+CSV File
+   |
+   v
+Scheduled File Polling
+   |
+   v
+CSV Parsing
+   |
+   v
+Order Validation
+   |
+   v
+Duplicate Order Check
+   |
+   v
+H2 Database Persistence
+   |
+   v
+Processing Logs
+```
+
+**Failure Flow:**
+
+```text
+Invalid or Failed Record
+   |
+   v
+Error Handling
+   |
+   v
+Error Directory
+```
+
+## Technologies Used
+
+- Java 17
+- Spring Boot
+- Apache Camel 4.22.0
+- Spring Data JPA
+- H2 Database
+- Maven
+- REST APIs
+- Spring Boot Actuator
+
+## Features
+
+- Scheduled polling of CSV files
+- CSV-to-Java object conversion
+- Order data validation
+- Duplicate order prevention
+- H2 database persistence
+- Processed and error file handling
+- REST APIs to retrieve order records
+- Application health monitoring using Actuator
+
+## Sample Input
+
+**File:** `orders.csv`
+
+```csv
+orderId,customerName,productCode,quantity,unitPrice
+ORD-1001,John Smith,LAPTOP,2,75000.00
+ORD-1002,Emma Watson,MOBILE,1,45000.00
+```
+
+## Expected Outcomes
+
+- Camel polls the incoming directory for CSV files.
+- CSV records are converted into Java objects.
+- Order details are validated before persistence.
+- Valid orders are saved in the H2 database.
+- Duplicate orders are skipped.
+- Successfully processed files are moved to the processed directory.
+- Invalid or failed files are handled through the error directory.
+- REST APIs allow users to retrieve stored order records.
+- The Actuator health endpoint reports application status.
+
+## Database Details
+
+- **Database:** H2
+- **Table:** `order_records`
+- **Database Type:** In-memory
+
+### H2 Console
+
+```text
+http://localhost:8084/h2-console
+```
+
+Use the JDBC URL configured in `application.properties`.
+
+## REST API
+
+### Retrieve All Orders
+
+```http
+GET /api/orders
+```
+
+Returns all orders stored in the database.
+
+### Retrieve Order by Order ID
+
+```http
+GET /api/orders/{orderId}
+```
+
+Returns the order matching the specified order ID.
+
+## File Directory Structure
+
+```text
+data/
+└── orders/
+    ├── incoming/
+    ├── processed/
+    └── error/
+```
+
+- `incoming` — CSV files waiting to be processed
+- `processed` — Successfully processed files
+- `error` — Files that failed processing
+
+## How to Run
+
+1. Clone the repository.
+2. Open the `FileDatabaseIntegration` project in your IDE.
+3. Ensure Java 17 and Maven are configured.
+4. Run the Spring Boot application.
+5. Place a CSV order file in the configured `incoming` directory.
+6. Check the application logs and H2 database for processed orders.
+7. Test the REST APIs using Postman.
+
+## Application Health
+
+```http
+GET /actuator/health
+```
+
+Returns the health status of the application.
+
