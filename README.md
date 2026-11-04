@@ -189,7 +189,7 @@ Returns the order ID, correlation ID, current status, timestamps, and error deta
 - Message Format: JSON
 
 
-# 3.File-to-Database Integration Using Apache Camel
+# Project 03: File-to-Database Integration Using Apache Camel
 
 ## Overview
 
@@ -347,3 +347,181 @@ GET /actuator/health
 
 Returns the health status of the application.
 
+
+
+# Project 04: SFTP-to-REST Integration Using Apache Camel
+
+## Overview
+
+This project demonstrates an SFTP-based order integration using **Apache Camel and Spring Boot**. Camel periodically polls an SFTP server for order files, validates the records, converts valid order data into JSON, and submits it to a REST API.
+
+The application includes retry handling, duplicate file prevention, correlation ID tracking, and file movement to processed and error directories.
+
+## Scenario
+
+An external partner system uploads order files to an SFTP server. Apache Camel polls the incoming directory, reads and validates each order record, converts the order data into JSON, and submits it to an internal REST API.
+
+Correlation IDs are used to trace each order across SFTP and REST processing. Failed REST requests are retried, duplicate file processing is prevented, and files are moved to the appropriate directories based on the processing result.
+
+## Integration Flow
+
+```text
+SFTP Server
+   |
+   v
+Scheduled Polling
+   |
+   v
+File Reading
+   |
+   v
+Correlation ID Generation
+   |
+   v
+Duplicate File Check
+   |
+   v
+Order Validation
+   |
+   v
+JSON Conversion
+   |
+   v
+REST API Submission
+   |
+   v
+REST Response Logging
+   |
+   v
+File Movement
+```
+
+**Failure Flow:**
+
+```text
+REST Processing Failure
+   |
+   v
+Retry (3 Attempts)
+   |
+   v
+Error Handling
+   |
+   v
+Error Directory
+```
+
+## Technologies Used
+
+- Java 17
+- Spring Boot
+- Apache Camel 4.22.0
+- Apache MINA SSHD
+- Camel SFTP
+- Camel HTTP
+- Maven
+- REST APIs
+
+## Features
+
+- Embedded SFTP server
+- Scheduled polling of SFTP files
+- Order file validation
+- Order record-to-JSON conversion
+- REST API order submission
+- Retry and exception handling
+- Duplicate file prevention
+- Correlation ID generation and propagation
+- Processed and error file handling
+
+## Sample Input
+
+**File:** `order-001.txt`
+
+```text
+ORD-3001,John Smith,Laptop,1,75000.00
+```
+
+## Expected Outcomes
+
+- Camel polls the SFTP incoming directory for order files.
+- Order records are read and validated.
+- A correlation ID is generated and included in logs and the REST request header.
+- Valid order records are converted into JSON.
+- The JSON order is submitted to the REST API.
+- The REST API returns an order response with status `RECEIVED`.
+- Successfully processed files are moved to the processed directory.
+- Invalid or failed files are moved to the error directory.
+- Failed REST requests are retried up to 3 times.
+- Duplicate file names are skipped by the idempotent repository during the application's current runtime.
+
+## SFTP Details
+
+- **Server:** Embedded Apache MINA SSHD
+- **Host:** `localhost`
+- **Port:** `2222`
+- **Username:** `cameluser`
+- **Incoming Directory:** `C:\CamelProject\sftp-server\incoming`
+- **Success Directory:** `.processed`
+- **Failure Directory:** `.error`
+
+## REST API
+
+### Submit Order
+
+```http
+POST /api/orders
+```
+
+Receives an order submitted by the SFTP integration. 
+
+**Request Header:**
+
+```text
+X-Correlation-ID: <generated-correlation-id>
+```
+
+**Response Example:**
+
+```json
+{
+  "message": "Order received successfully",
+  "orderId": "ORD-3001",
+  "status": "RECEIVED"
+}
+```
+
+## Reliability Details
+
+- **Retry Attempts:** `3`
+- **Retry Delay:** `2 seconds`
+- **Duplicate Prevention:** In-memory idempotent repository
+- **Correlation Header:** `X-Correlation-ID`
+
+## File Directory Structure
+
+```text
+sftp-server/
+├── incoming/
+├── .processed/
+└── .error/
+```
+
+- `incoming` — Order files waiting to be processed
+- `.processed` — Successfully processed files
+- `.error` — Files that failed processing
+
+## How to Run
+
+1. Clone the repository.
+2. Open the `SftpRestIntegration` project in your IDE.
+3. Ensure Java 17 and Maven are configured.
+4. Run the Spring Boot application.
+5. Upload an order file to the SFTP `incoming` directory.
+6. Check the application logs for validation, correlation ID, and REST response details.
+7. Verify the file is moved to the appropriate directory.
+
+## Learning Outcomes
+
+This project demonstrates how
+Apache Camel can build SFTP-to-REST integrations with scheduled polling, validation, JSON conversion, retry handling, duplicate prevention, correlation ID tracking, and REST API communication.
