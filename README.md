@@ -701,3 +701,328 @@ sftp-server/
 
 This project demonstrates how
 Apache Camel can build SFTP-to-REST integrations with scheduled polling, validation, JSON conversion, retry handling, duplicate prevention, correlation ID tracking, and REST API communication.
+
+
+
+# Project 06: Customer Legacy SOAP-to-REST Integration Using Apache Camel
+
+## Overview
+
+This project demonstrates how to integrate a legacy SOAP-based customer management system with modern REST applications using **Spring Boot and Apache Camel**.
+
+The application exposes a REST API that accepts a customer ID, invokes a SOAP service through Apache Camel CXF, processes the SOAP response, and returns customer information as JSON.
+
+The integration includes request validation, customer-not-found handling, retry and error handling, correlation ID logging, and application health monitoring.
+
+## Scenario
+
+A company uses a legacy customer management system that provides customer information through a SOAP web service. Modern applications, such as web portals and mobile applications, consume customer information through REST APIs that return JSON.
+
+Apache Camel acts as the integration layer between these systems.
+
+The application receives REST requests, validates the customer ID, invokes the SOAP service, transforms the SOAP response into a Java object, and returns the customer details as JSON.
+
+## Integration Flow
+
+### Successful Flow
+
+```text
+REST Client
+    |
+    | GET /api/customers/{customerId}
+    v
+Camel REST Endpoint
+    |
+    v
+Customer Request Validation
+    |
+    v
+SOAP Request Preparation
+    |
+    v
+Camel CXF SOAP Invocation
+    |
+    v
+Legacy Customer SOAP Service
+    |
+    v
+SOAP Response Processing
+    |
+    v
+Customer Java Object Mapping
+    |
+    v
+JSON Marshalling
+    |
+    v
+REST JSON Response
+```
+
+### Failure Flow
+
+```text
+SOAP Service Failure
+        |
+        v
+Retry (3 Attempts)
+        |
+        v
+Retry Delay (2 Seconds)
+        |
+        v
+Retries Exhausted
+        |
+        v
+HTTP 502 Bad Gateway
+        |
+        v
+JSON Error Response
+```
+
+## Technology Stack
+
+| Component | Technology |
+|---|---|
+| Programming Language | Java 17 |
+| Application Framework | Spring Boot 4.1.2 |
+| Integration Framework | Apache Camel 4.22.0 |
+| REST Integration | Camel Platform HTTP |
+| SOAP Integration | Apache Camel CXF |
+| SOAP Contract | WSDL |
+| JSON Transformation | Jackson |
+| Monitoring | Spring Boot Actuator |
+| Build Tool | Maven |
+| API Testing | Postman |
+
+## Project Structure
+
+```text
+SoapRestIntegration
+├── src
+│   ├── main
+│   │   ├── java
+│   │   │   └── com.example.soaprest
+│   │   │       ├── config
+│   │   │       │   └── SoapConfig.java
+│   │   │       ├── model
+│   │   │       │   └── Customer.java
+│   │   │       ├── route
+│   │   │       │   ├── CustomerRestRoute.java
+│   │   │       │   ├── CustomerSoapRoute.java
+│   │   │       │   └── CustomerValidationRoute.java
+│   │   │       ├── soap
+│   │   │       │   ├── CustomerSoapService.java
+│   │   │       │   ├── CustomerSoapServiceImpl.java
+│   │   │       │   └── CustomerSoapResponse.java
+│   │   │       └── SoapRestIntegrationApplication.java
+│   │   └── resources
+│   │       └── application.properties
+│   └── test
+│       └── java
+├── pom.xml
+└── README.md
+```
+
+## SOAP Service Details
+
+| Property | Value |
+|---|---|
+| SOAP Service | `CustomerSoapService` |
+| SOAP Operation | `getCustomer` |
+| SOAP Endpoint | `http://localhost:8086/services/customer` |
+| WSDL URL | `http://localhost:8086/services/customer?wsdl` |
+| SOAP Component | Apache CXF |
+| Data Format | POJO |
+
+The SOAP service provides sample customer information for the following customer IDs:
+
+| Customer ID | Customer Name | Email |
+|---|---|---|
+| `CUST-101` | John Smith | john@example.com |
+| `CUST-102` | Alice Johnson | alice@example.com |
+
+## REST API Details
+
+### Get Customer by ID
+
+**Endpoint**
+
+```http
+GET /api/customers/{customerId}
+```
+
+**Example**
+
+```http
+GET http://localhost:8086/api/customers/CUST-101
+```
+
+**Successful Response — HTTP 200 OK**
+
+```json
+{
+  "customerId": "CUST-101",
+  "customerName": "John Smith",
+  "email": "john@example.com"
+}
+```
+
+### Customer Not Found
+
+**Example**
+
+```http
+GET http://localhost:8086/api/customers/CUST-999
+```
+
+**Response — HTTP 404 Not Found**
+
+```json
+{
+  "error": "Customer not found",
+  "customerId": "CUST-999"
+}
+```
+
+### Invalid Customer ID
+
+**Example**
+
+```http
+GET http://localhost:8086/api/customers/@@@
+```
+
+**Response — HTTP 400 Bad Request**
+
+```json
+{
+  "error": "Invalid customer ID",
+  "message": "Customer ID must contain 3–20 letters, numbers, or hyphens"
+}
+```
+
+### SOAP Service Unavailable
+
+If the SOAP service fails after the configured retry attempts, the integration returns:
+
+**Response — HTTP 502 Bad Gateway**
+
+```json
+{
+  "error": "Customer service is temporarily unavailable"
+}
+```
+
+## Request and Response Transformation
+
+The integration performs the following transformations:
+
+1. Receives the customer ID from the REST URL.
+2. Validates the customer ID.
+3. Prepares the SOAP operation parameters.
+4. Invokes the SOAP service through Camel CXF.
+5. Extracts the SOAP operation response from the CXF response.
+6. Maps the SOAP response into a Java `Customer` object.
+7. Uses Jackson to serialize the Java object into JSON.
+8. Returns the JSON response to the REST client.
+
+## Reliability and Error Handling
+
+The application includes the following reliability features:
+
+- **Request Validation:** Rejects malformed customer IDs before invoking the SOAP service.
+- **Customer Not Found Handling:** Returns HTTP `404 Not Found` for unknown customers.
+- **Retry Mechanism:** Retries failed SOAP calls up to 3 times.
+- **Retry Delay:** Waits 2 seconds between retry attempts.
+- **Controlled Error Response:** Returns HTTP `502 Bad Gateway` if the SOAP service remains unavailable.
+- **Correlation ID Logging:** Uses the `X-Correlation-ID` header to trace requests through the integration flow.
+
+## Health Monitoring
+
+Spring Boot Actuator is configured to expose application health information.
+
+**Health Endpoint**
+
+```http
+GET http://localhost:8086/actuator/health
+```
+
+**Expected Response**
+
+```json
+{
+  "status": "UP"
+}
+```
+
+## Configuration
+
+The application uses the following configuration in `application.properties`:
+
+```properties
+server.port=8086
+
+customer.soap.endpoint=http://localhost:8086/services/customer
+
+cxf.path=/services
+
+management.endpoints.web.exposure.include=health,info
+management.endpoint.health.show-details=always
+```
+
+## How to Run
+
+### Prerequisites
+
+- Java 17 or later
+- Maven
+- Eclipse, IntelliJ IDEA, or another Java IDE
+- Postman
+
+### Steps
+
+1. Clone or download the repository.
+2. Import the project as a Maven project.
+3. Ensure the configured Java version is available.
+4. Update Maven dependencies.
+5. Run `SoapRestIntegrationApplication`.
+6. Confirm that the application starts on port `8086`.
+7. Open the WSDL URL to verify the SOAP service.
+8. Use Postman to test the REST API.
+
+### Verify the SOAP WSDL
+
+Open:
+
+```text
+http://localhost:8086/services/customer?wsdl
+```
+
+### Test the REST API
+
+Send:
+
+```http
+GET http://localhost:8086/api/customers/CUST-101
+```
+
+The application should return the customer details as JSON.
+
+## Expected Outcomes
+
+- REST clients can retrieve customer information from a SOAP-based legacy system.
+- SOAP requests are invoked through Apache Camel CXF.
+- SOAP responses are transformed into JSON.
+- Invalid requests are rejected before reaching the SOAP service.
+- Unknown customers receive an appropriate `404` response.
+- Failed SOAP calls are retried before returning a controlled error.
+- Correlation IDs support request tracing.
+- Actuator provides application health information.
+
+## Project Outcome
+
+This project demonstrates how Apache Camel can bridge legacy SOAP services and modern REST applications.
+
+It covers REST-to-SOAP communication, request and response transformation, validation, error handling, retry mechanisms, correlation ID logging, and health monitoring.
+
+The integration enables modern applications to consume customer information through REST APIs without directly interacting with the legacy SOAP system.
