@@ -189,7 +189,183 @@ Returns the order ID, correlation ID, current status, timestamps, and error deta
 - Message Format: JSON
 
 
-# Project 03: File-to-Database Integration Using Apache Camel
+
+
+# Project 03: Kafka-to-Database Integration Using Apache Camel
+
+## Overview
+
+This project demonstrates a Kafka-based order integration using **Apache Camel and Spring Boot**. Camel consumes order messages from a Kafka topic, converts JSON messages into Java objects, validates order details, prevents duplicate orders, and persists valid orders into an H2 database.
+
+The application includes retry handling, Dead Letter Queue (DLQ) processing, REST APIs for retrieving orders, and application health monitoring.
+
+## Scenario
+
+An e-commerce application receives order messages from upstream systems through a Kafka topic. Apache Camel consumes the messages, unmarshals the JSON payload into a Java object, and validates the order details.
+
+Valid orders are checked for duplicates and saved in the H2 database. If message processing fails, Camel retries the operation and routes messages that continue to fail to a Dead Letter Queue. REST APIs allow users to retrieve all saved orders or search for a specific order by its order ID.
+
+## Integration Flow
+
+```text
+Kafka Topic (orders)
+   |
+   v
+Message Consumption
+   |
+   v
+JSON Unmarshalling
+   |
+   v
+Order Validation
+   |
+   v
+Duplicate Order Check
+   |
+   v
+Order Mapping
+   |
+   v
+H2 Database Persistence
+   |
+   v
+Processing Logs
+```
+
+**Failure Flow:**
+
+```text
+Message Processing Failure
+   |
+   v
+Retry (3 Attempts)
+   |
+   v
+Dead Letter Queue (orders.DLQ)
+```
+
+## Technologies Used
+
+- Java 17
+- Spring Boot
+- Apache Camel 4.22.0
+- Apache Kafka
+- Spring Data JPA
+- H2 Database
+- Maven
+- REST APIs
+- Spring Boot Actuator
+
+## Features
+
+- Kafka message consumption
+- JSON-to-Java object conversion
+- Order data validation
+- Duplicate order prevention
+- H2 database persistence
+- Retry and exception handling
+- Dead Letter Queue (DLQ) processing
+- REST APIs to retrieve order records
+- Application health monitoring using Actuator
+
+## Sample Input
+
+**Kafka Topic:** `orders`
+
+**Message Body:**
+
+```json
+{
+  "orderId": "ORD-2001",
+  "customerName": "John Smith",
+  "productName": "Laptop",
+  "quantity": 2,
+  "unitPrice": 75000.00,
+  "correlationId": "CORR-1001"
+}
+```
+
+## Expected Outcomes
+
+- Camel consumes valid order messages from the Kafka `orders` topic.
+- JSON messages are converted into Java objects and validated.
+- Valid orders are saved in the H2 database.
+- Duplicate orders are skipped to prevent duplicate database records.
+- Invalid or failed messages are retried up to 3 times.
+- Messages that continue to fail are routed to the `orders.DLQ` topic.
+- `GET /api/orders` retrieves all saved orders.
+- `GET /api/orders/{orderId}` retrieves a specific order.
+- The Actuator health endpoint reports application status.
+
+## Database Details
+
+- **Database:** H2
+- **Table:** `order_record`
+- **Database Type:** In-memory
+
+### H2 Console
+
+```text
+http://localhost:8081/h2-console
+```
+
+Use the JDBC URL configured in `application.properties`.
+
+## Kafka Details
+
+- **Broker:** `localhost:9092`
+- **Input Topic:** `orders`
+- **Consumer Group:** `order-database-consumer`
+- **Dead Letter Topic:** `orders.DLQ`
+- **Retry Attempts:** `3`
+- **Retry Delay:** `2 seconds`
+
+## REST API
+
+### Retrieve All Orders
+
+```http
+GET /api/orders
+```
+
+Returns all orders stored in the database.
+
+### Retrieve Order by Order ID
+
+```http
+GET /api/orders/{orderId}
+```
+
+Returns the order matching the specified order ID.
+
+## How to Run
+
+1. Clone the repository.
+2. Open the `KafkaDatabaseIntegration` project in your IDE.
+3. Ensure Java 17, Maven, and Kafka are configured.
+4. Start the Kafka broker.
+5. Ensure the required Kafka topics are available.
+6. Run the Spring Boot application.
+7. Publish an order message to the `orders` topic.
+8. Check the application logs and H2 database for processed orders.
+9. Test the REST APIs using Postman.
+
+## Application Health
+
+```http
+GET /actuator/health
+```
+
+Returns the health status of the application.
+
+## Learning Outcomes
+
+This project demonstrates how Apache Camel can build Kafka-to-database integrations with message consumption, JSON unmarshalling, validation, duplicate prevention, database persistence, retry handling, Dead Letter Queue processing, and REST-based data retrieval.
+
+
+
+
+# Project 04: File-to-Database Integration Using Apache Camel
 
 ## Overview
 
@@ -349,7 +525,7 @@ Returns the health status of the application.
 
 
 
-# Project 04: SFTP-to-REST Integration Using Apache Camel
+# Project 05: SFTP-to-REST Integration Using Apache Camel
 
 ## Overview
 
