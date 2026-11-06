@@ -1026,3 +1026,229 @@ This project demonstrates how Apache Camel can bridge legacy SOAP services and m
 It covers REST-to-SOAP communication, request and response transformation, validation, error handling, retry mechanisms, correlation ID logging, and health monitoring.
 
 The integration enables modern applications to consume customer information through REST APIs without directly interacting with the legacy SOAP system.
+
+
+
+# Project 07: EDI File to Database Integration using Apache Camel
+
+## Project Overview
+
+This project demonstrates an EDI-based purchase order integration system using **Spring Boot, Apache Camel, and H2 Database**.
+
+The application receives supplier purchase orders in EDI X12 850 format, parses the EDI data into Java objects, validates the purchase orders, checks for duplicates, and stores valid orders in an H2 database.
+
+Apache Camel automatically polls the incoming folder and manages file movement based on processing outcomes. Correlation IDs and application logs help trace the processing flow.
+
+## Scenario
+
+A business receives purchase orders from external suppliers through EDI files. The application automatically processes these files, extracts purchase order details, validates the data, and persists valid orders.
+
+Duplicate purchase orders are prevented from being inserted again. Successfully processed files are moved to the processed folder, duplicate files are moved to the duplicate folder, and failed files are moved to the error folder.
+
+## Technology Stack
+
+- Java 17
+- Spring Boot 4.1.2
+- Apache Camel 4.22.0
+- Spring Data JPA
+- H2 Database
+- Maven
+- Spring Boot Actuator
+
+## Integration Flow
+
+```text
+Supplier EDI X12 850 File
+          |
+          v
+Camel File Polling
+          |
+          v
+Correlation ID Generation
+          |
+          v
+EDI Parsing
+          |
+          v
+Purchase Order Validation
+          |
+          v
+Duplicate Order Check
+          |
+          v
+H2 Database Persistence
+          |
+          v
+File Movement
+```
+
+### Failure Flow
+
+```text
+Processing Failure
+       |
+       v
+Retry Mechanism
+       |
+       v
+Error Handling
+       |
+       v
+Error Folder
+```
+
+### Duplicate Flow
+
+```text
+Duplicate Purchase Order
+          |
+          v
+Duplicate Detection
+          |
+          v
+Duplicate Folder
+```
+
+## Sample Input
+
+**Input Folder:**
+
+```text
+C:/CamelProject/edi-file-processing/incoming
+```
+
+**File:** `purchase-order-001.edi`
+
+```text
+ISA*00*          *00*          *ZZ*SUPPLIER01     *ZZ*COMPANY01      *261105*1200*U*00401*000000001*0*T*:~
+GS*PO*SUPPLIER01*COMPANY01*20261105*1200*1*X*004010~
+ST*850*0001~
+BEG*00*SA*PO12345**20261105~
+N1*BY*ABC COMPANY~
+PO1*1*10*EA*25.00**VP*ITEM100~
+CTT*1~
+SE*5*0001~
+GE*1*1~
+IEA*1*000000001~
+```
+
+## Parsed Purchase Order
+
+The EDI parser extracts the relevant information into a Java `PurchaseOrder` object.
+
+```json
+{
+  "orderId": "PO12345",
+  "buyerName": "ABC COMPANY",
+  "productCode": "ITEM100",
+  "quantity": 10,
+  "unitPrice": 25.00
+}
+```
+
+## Expected Outcomes
+
+- Camel automatically polls the incoming folder for EDI files.
+- EDI files are parsed into Java purchase-order objects.
+- Purchase orders are validated and checked for duplicates.
+- Valid orders are saved in the H2 database.
+- Successfully processed files are moved to the `processed` folder.
+- Duplicate files are moved to the `duplicate` folder.
+- Failed files are moved to the `error` folder after configured retries.
+- Correlation IDs and processing details are recorded in application logs.
+- Actuator health endpoint reports the application status.
+
+
+## Database Details
+
+- **Database:** H2
+- **Table:** `purchase_orders`
+- **Persistence:** Spring Data JPA
+
+### H2 Console
+
+```text
+http://localhost:8087/h2-console
+```
+
+**JDBC URL:**
+
+```text
+jdbc:h2:mem:edidb
+```
+
+**Username:** `sa`  
+**Password:** Leave blank
+
+### Verify Saved Orders
+
+```sql
+SELECT * FROM PURCHASE_ORDERS;
+```
+
+## File Details
+
+| File Type | Location |
+|---|---|
+| Incoming EDI files | `C:/CamelProject/edi-file-processing/incoming` |
+| Successfully processed files | `C:/CamelProject/edi-file-processing/processed` |
+| Failed files | `C:/CamelProject/edi-file-processing/error` |
+| Duplicate files | `C:/CamelProject/edi-file-processing/duplicate` |
+
+**Supported sample format:** EDI X12 850 Purchase Order
+
+## Application Configuration
+
+| Property | Value |
+|---|---|
+| Application Name | `edi-file-processing` |
+| Server Port | `8087` |
+| Input Directory | `C:/CamelProject/edi-file-processing/incoming` |
+| Processed Directory | `C:/CamelProject/edi-file-processing/processed` |
+| Error Directory | `C:/CamelProject/edi-file-processing/error` |
+| Duplicate Directory | `C:/CamelProject/edi-file-processing/duplicate` |
+
+## Monitoring
+
+Spring Boot Actuator provides application health monitoring.
+
+**Health Endpoint:**
+
+```text
+http://localhost:8087/actuator/health
+```
+
+Expected response:
+
+```json
+{
+  "status": "UP"
+}
+```
+
+## How to Run
+
+1. Clone or download the project.
+2. Open it in Eclipse or IntelliJ IDEA.
+3. Verify Java 17 and Maven configuration.
+4. Run the Spring Boot application.
+5. Place an `.edi` file in the incoming folder.
+6. Check the application logs and verify file movement.
+7. Open the H2 console and verify the saved purchase order.
+
+## Implementation Components
+
+| Component | Responsibility |
+|---|---|
+| `EdiFileRoute` | Polls incoming files and orchestrates processing |
+| `EdiParserProcessor` | Extracts purchase-order data from EDI segments |
+| `PurchaseOrderValidationBean` | Validates purchase-order fields and business rules |
+| `PurchaseOrderService` | Checks duplicates and persists valid orders |
+| `PurchaseOrderRepository` | Performs database operations |
+| `CorrelationIdProcessor` | Generates correlation IDs for tracing |
+| `PurchaseOrderEntity` | Represents the database table |
+| Spring Boot Actuator | Provides health monitoring |
+
+## Conclusion
+
+This project demonstrates a file-based EDI purchase order integration using Apache Camel. It covers automated file polling, EDI parsing, business validation, duplicate prevention, database persistence, file movement, error handling, correlation ID tracking, and application health monitoring.
