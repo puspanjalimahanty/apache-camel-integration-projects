@@ -1252,3 +1252,88 @@ Expected response:
 ## Conclusion
 
 This project demonstrates a file-based EDI purchase order integration using Apache Camel. It covers automated file polling, EDI parsing, business validation, duplicate prevention, database persistence, file movement, error handling, correlation ID tracking, and application health monitoring.
+
+
+# Camel Error Handling Framework
+
+## Overview
+
+The **Camel Error Handling Framework** is a centralized error-management solution built using Spring Boot and Apache Camel. It processes incoming order CSV files, validates their contents, tracks processing using correlation IDs, and applies exception-specific error-handling policies.
+
+The framework distinguishes between file parsing errors, business validation errors, technical failures, and unexpected exceptions. Based on the exception type, it applies retry policies or moves failed files to the appropriate error-handling directory.
+
+## Scenario
+
+An order-processing system receives CSV files containing customer order details. Apache Camel periodically polls the incoming directory, parses the CSV content into Java objects, validates each order, and logs the processing details.
+
+If an error occurs, the centralized exception-handling mechanism determines whether the error requires retries or should be handled immediately.
+
+## Integration Flow
+
+**Successful Flow:**
+
+`File Polling → Correlation ID Generation → CSV Parsing → Order Object Creation → Order Validation → Order Details Logging → Processed Directory`
+
+**Failure Flow:**
+
+- File Parsing Error → No Retry → Error Directory
+- Business Validation Error → No Retry → Error Directory
+- Technical Exception → 3 Retry Attempts → DLQ Configuration
+- Unexpected Exception → 3 Retry Attempts → DLQ Configuration
+
+## Key Implementations
+
+- **File Polling:** Periodically reads CSV files from the incoming directory.
+- **Correlation ID:** Generates a unique identifier to track each file-processing request.
+- **CSV Parsing:** Uses Apache Commons CSV to convert file records into Java Order objects.
+- **Order Validation:** Validates mandatory fields and business-related data.
+- **Centralized Exception Handling:** Uses Camel `onException()` to handle different exception types.
+- **Retry Mechanism:** Configures three retry attempts with a two-second delay for technical and unexpected exceptions.
+- **File Management:** Configures separate directories for incoming, processed, and failed files.
+- **Logging:** Logs correlation IDs, order details, and exception information.
+- **Actuator Health Check:** Exposes the application health endpoint.
+
+## Technologies Used
+
+- Java 17
+- Spring Boot 4.1.2
+- Apache Camel 4.22.0
+- Apache Commons CSV
+- Maven
+- Spring Boot Actuator
+
+## Application Details
+
+| Property | Value |
+|---|---|
+| Application Name | CamelErrorHandlingFramework |
+| Port | 8088 |
+| Base Package | `com.example.errorhandlingframework` |
+| Input Directory | `incoming` |
+| Success Directory | `processed` |
+| Error Directory | `error` |
+| DLQ Directory | `dead-letter` |
+
+## Sample Input
+
+**File:** `orders-001.csv`
+
+```csv
+orderId,customerName,productCode,quantity,unitPrice
+ORD1001,Rahul,P101,2,500.00
+ORD1002,Priya,P102,1,750.00
+```
+
+## Expected Outcomes
+
+- Valid CSV files are parsed and validated successfully.
+- Correlation IDs help trace file-processing requests.
+- Successfully processed files are moved to the processed directory.
+- Parsing and validation failures are handled without retries.
+- Technical and unexpected exceptions are configured with retry policies.
+- Failed files can be directed to the configured DLQ handling mechanism once its movement is verified.
+
+## Note
+
+Technical failure simulation was performed, but retry exhaustion and DLQ file movement have not yet been fully verified.
+
