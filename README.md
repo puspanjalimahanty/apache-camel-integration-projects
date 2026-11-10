@@ -1254,7 +1254,7 @@ Expected response:
 This project demonstrates a file-based EDI purchase order integration using Apache Camel. It covers automated file polling, EDI parsing, business validation, duplicate prevention, database persistence, file movement, error handling, correlation ID tracking, and application health monitoring.
 
 
-# Camel Error Handling Framework
+# Project 8: Camel Error Handling Framework
 
 ## Overview
 
@@ -1337,3 +1337,107 @@ ORD1002,Priya,P102,1,750.00
 
 Technical failure simulation was performed, but retry exhaustion and DLQ file movement have not yet been fully verified.
 
+
+
+# Project 9: Order Notification Service
+
+## Overview
+
+The **Order Notification Service** is an event-driven notification application built using Spring Boot and Apache Camel. It consumes order events from Kafka, processes JSON messages, stores notification details in an H2 database, and sends email notifications using Gmail SMTP.
+
+The service includes centralized exception handling, retry with exponential backoff, notification status tracking, and Dead Letter Queue (DLQ) handling for failed email deliveries.
+
+## Scenario
+
+An order management system publishes order events to a Kafka topic. The Order Notification Service consumes these events, converts JSON messages into Java objects, saves notification details with a `PENDING` status, and sends email notifications to customers.
+
+After successful email delivery, the notification status is updated to `SENT`. If email delivery fails, Apache Camel retries the operation and routes notifications that exhaust all retry attempts to the DLQ.
+
+## Integration Flow
+
+**Successful Flow:**
+
+`Kafka Consumption → JSON Deserialization → H2 Persistence (PENDING) → Email Delivery (Gmail SMTP) → Update Notification Status (SENT)`
+
+**Failure Flow:**
+
+- Email Delivery Failure → 3 Retry Attempts with Exponential Backoff
+- Retry Exhaustion → Update Notification Status (`FAILED`) → Dead Letter Queue (`dead-letter`)
+
+## Key Implementations
+
+- **Kafka Consumer:** Consumes order events from the `order-events` topic.
+- **JSON Deserialization:** Converts incoming JSON messages into Java OrderNotificationEvent objects.
+- **H2 Persistence:** Stores notification details and delivery status in the database.
+- **Email Notification:** Sends customer email notifications using Gmail SMTP.
+- **Notification Status Tracking:** Maintains `PENDING`, `SENT`, and `FAILED` statuses.
+- **Retry Mechanism:** Configures three retry attempts with exponential backoff for failed email delivery.
+- **Dead Letter Queue:** Stores failed notification messages in the `dead-letter` directory after retry exhaustion.
+- **Duplicate Record Prevention:** Saves notification details only once before email delivery retries.
+- **Centralized Exception Handling:** Uses Camel `onException()` for failure handling and recovery.
+- **Logging:** Logs incoming events, retry attempts, and notification processing results.
+
+## Technologies Used
+
+- Java 17
+- Spring Boot 4.1.2
+- Apache Camel 4.22.0
+- Apache Camel Kafka
+- Apache Camel Mail
+- Apache Camel Jackson
+- Spring Data JPA
+- H2 Database
+- Apache Kafka 4.3.2
+- Gmail SMTP
+- Maven
+
+## Application Details
+
+| Property | Value |
+|---|---|
+| Application Name | OrderNotificationService |
+| Port | 8084 |
+| Base Package | `com.example.ordernotification` |
+| Kafka Topic | `order-events` |
+| Kafka Broker | `localhost:9092` |
+| Consumer Group | `notification-service` |
+| Database | H2 (`notificationdb`) |
+| Database Table | `notification_records` |
+| Email Provider | Gmail SMTP |
+| DLQ Directory | `dead-letter` |
+
+## Sample Input
+
+**Kafka Topic:** `order-events`
+
+**Sample JSON Message:**
+
+```json
+{
+  "orderId": "ORD1001",
+  "customerName": "Rahul",
+  "customerEmail": "rahul@gmail.com",
+  "eventType": "ORDER_CREATED",
+  "message": "Your order has been placed successfully"
+}
+```
+
+## Expected Outcomes
+
+- Order events are consumed successfully from Kafka.
+- JSON messages are converted into Java event objects.
+- Notification details are stored in H2 with `PENDING` status.
+- Emails are delivered successfully using Gmail SMTP.
+- Successful notifications are updated to `SENT`.
+- Failed email deliveries undergo three retry attempts with exponential backoff.
+- Notifications that exhaust retries are marked `FAILED` and routed to the DLQ.
+- Email delivery retries do not create duplicate notification records.
+
+## Configuration Note
+
+Gmail credentials are supplied through environment variables:
+
+- `GMAIL_USERNAME`
+- `GMAIL_APP_PASSWORD`
+
+Sensitive credentials are not hardcoded in the application source code.
