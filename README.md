@@ -1441,3 +1441,86 @@ Gmail credentials are supplied through environment variables:
 - `GMAIL_APP_PASSWORD`
 
 Sensitive credentials are not hardcoded in the application source code.
+
+
+# Project 10: Data Enrichment Service
+
+## Overview
+
+The **Data Enrichment Service** is an integration solution built using Spring Boot and Apache Camel. It receives incoming order requests through a REST API, retrieves additional customer and product information from an H2 database, and enriches the original order with the retrieved details using Apache Camel's Content Enricher EIP.
+
+## Scenario
+
+An e-commerce order management system receives orders containing basic information such as order ID, customer ID, product code, and quantity.
+
+The incoming order does not contain complete customer and product details. The Data Enrichment Service retrieves the missing information from the database and combines it with the original order before returning the enriched response.
+
+## Integration Flow
+
+1. Receive an order request through the REST API.
+2. Validate the incoming order details.
+3. Retrieve customer information using the customer ID.
+4. Store customer details as an exchange property.
+5. Retrieve product information using the product code.
+6. Use Apache Camel Content Enricher (`enrich()`) to combine the original order with retrieved product details.
+7. Use a custom AggregationStrategy to combine customer details, product details, and original order information.
+8. Calculate the total order amount.
+9. Return the enriched order as a JSON response.
+
+## Key Implementations
+
+- REST API integration using Apache Camel Platform HTTP.
+- Customer and product data retrieval using Spring Data JPA and H2.
+- Apache Camel Content Enricher EIP using `enrich()`.
+- Custom AggregationStrategy for combining multiple data sources.
+- Order request validation using a custom processor.
+- Centralized exception handling using Camel `onException()`.
+- Custom exception handling for missing customer and product records.
+- HTTP 400 responses for invalid requests.
+- HTTP 404 responses for missing customer or product records.
+- Product availability information included in the enriched response.
+
+## Technologies Used
+
+- Java 17
+- Spring Boot 4.1.2
+- Apache Camel 4.22.0
+- Spring Data JPA
+- H2 Database
+- Maven
+- REST API
+- JSON
+
+## Application Details
+
+- Application Name: DataEnrichmentService
+- Port: 8085
+- Database: H2
+- H2 Console: http://localhost:8085/h2-console
+- API Endpoint: POST /api/orders/enrich
+
+## Sample Input
+
+```json
+{
+  "orderId": "ORD1001",
+  "customerId": "C101",
+  "productCode": "P101",
+  "quantity": 2
+}
+```
+
+## Expected Outcomes
+
+- Successfully enriches incoming orders with customer and product information.
+- Retrieves customer and product details from H2.
+- Calculates the total order amount.
+- Returns the complete enriched order as JSON.
+- Returns HTTP 400 for invalid order requests.
+- Returns HTTP 404 when customer or product records are not found.
+- Includes product availability in the enriched response.
+
+## Note
+
+The project demonstrates real-time data enrichment in an e-commerce integration scenario using Apache Camel's Content Enricher EIP and custom aggregation logic.
+
