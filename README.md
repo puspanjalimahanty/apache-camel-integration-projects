@@ -1524,3 +1524,182 @@ The incoming order does not contain complete customer and product details. The D
 
 The project demonstrates real-time data enrichment in an e-commerce integration scenario using Apache Camel's Content Enricher EIP and custom aggregation logic.
 
+
+
+# Project 11: EventDrivenOrderProcessing
+
+## 1. Overview
+
+An Event-Driven Order Processing System built using Spring Boot, Apache Camel, Apache Kafka, and H2 Database.
+
+The system processes orders through independent Payment, Inventory, and Notification components. Kafka enables asynchronous communication, while the Order Coordination Service determines the final order status based on payment and inventory results.
+
+## 2. Order Creation and Event Publishing
+
+### Scenario:-
+A customer places an order through the REST API. The system validates the request, retrieves the actual product price from the database, calculates the total amount, saves the order, and publishes an event to Kafka.
+
+### Flow:-
+Customer → Order REST API → Validation → Product Price Retrieval → Total Amount Calculation → H2 Database → Kafka (order-created-events)
+
+### Sample Input:-
+**POST** `/api/orders`
+
+```json
+{
+  "orderId": "ORD1001",
+  "customerName": "John",
+  "customerEmail": "john@gmail.com",
+  "productName": "Laptop",
+  "quantity": 2,
+  "unitPrice": 1
+}
+```
+
+### Expected Outcomes:-
+- Product price is retrieved from PRODUCT_STOCK; customer-provided unit price is not trusted.
+- Total amount is calculated using the database price.
+- Order is saved with PENDING payment and inventory statuses.
+- Order-created event is published to Kafka.
+
+## 3. Inventory Processing
+
+### Scenario:-
+The Inventory Consumer independently consumes order-created events and checks product availability before reserving stock.
+
+### Flow:-
+Kafka (order-created-events) → Inventory Consumer → Product Availability Check → Stock Reservation → Inventory Status Update
+
+### Expected Outcomes:-
+- Sufficient stock → RESERVED.
+- Insufficient stock → OUT_OF_STOCK.
+- Unknown product → PRODUCT_NOT_FOUND.
+- Stock and inventory records are updated in H2.
+
+## 4. Payment Processing and Validation
+
+### Scenario:-
+The customer submits payment details through a separate Payment API. The Payment Service retrieves the actual order amount from the database and validates the submitted amount instead of automatically marking payments as successful.
+
+### Flow:-
+Customer → Payment REST API → Payment Service → Retrieve Order Amount from H2 → Amount Validation → Payment Record Persistence → Order Coordination Service
+
+### Sample Input:-
+**POST** `/api/payments`
+
+```json
+{
+  "orderId": "ORD1001",
+  "amount": 100000
+}
+```
+
+### Expected Outcomes:-
+
+| Validation | Payment Status |
+|---|---|
+| Exact amount | SUCCESS |
+| Lower amount | INSUFFICIENT_AMOUNT |
+| Higher amount | AMOUNT_MISMATCH |
+| Unknown order | ORDER_NOT_FOUND |
+| Existing payment | DUPLICATE_PAYMENT |
+
+- Payment details and results are stored in PAYMENT_RECORDS.
+- Payment status is reported to the Order Coordination Service.
+- Payment is simulated; no external payment gateway or actual bank transaction is involved.
+
+## 5. Order Coordination
+
+### Scenario:-
+The Order Coordination Service receives payment and inventory results independently and determines the final order status only after both results are available.
+
+### Flow:-
+Payment Result + Inventory Result → Order Coordination Service → Final Status Determination → ORDER_RECORDS Update → Kafka (order-finalized-events)
+
+### Expected Outcomes:-
+
+| Payment Status | Inventory Status | Final Order Status |
+|---|---|---|
+| SUCCESS | RESERVED | CONFIRMED |
+| FAILED / INSUFFICIENT_AMOUNT / AMOUNT_MISMATCH | RESERVED | FAILED |
+| SUCCESS | OUT_OF_STOCK | FAILED |
+| SUCCESS | PRODUCT_NOT_FOUND | FAILED |
+
+## 6. Customer Notifications
+
+### Scenario:-
+The Notification Consumer processes finalized order events and sends emails based on the final order status.
+
+### Flow:-
+Kafka (order-finalized-events) → Notification Consumer → Status Check → Email Notification → H2 Database
+
+### Expected Outcomes:-
+- CONFIRMED → Order confirmation email.
+- FAILED → Order failure notification email.
+- Notification details are stored in NOTIFICATION_RECORDS.
+
+## 7. Error Handling and Dead Letter Queues
+
+### Scenario:-
+Technical failures during payment, inventory, or notification processing are handled through retries. Events that continue to fail are recorded and forwarded to their respective Kafka DLQs.
+
+### Flow:-
+
+- Payment Technical Failure → Retry (3 Attempts) → FAILED_EVENT → payment-service-dlq
+- Inventory Technical Failure → Retry (3 Attempts) → FAILED_EVENT → inventory-service-dlq
+- Notification Technical Failure → Retry (3 Attempts) → FAILED_EVENT → notification-service-dlq
+
+### Expected Outcomes:-
+- Technical failure details are stored in FAILED_EVENT.
+- Unprocessed events are forwarded to the respective DLQs for investigation.
+
+## 8. Order Status API
+
+### Scenario:-
+Retrieves the current payment, inventory, and overall order processing statuses using the order ID.
+
+### Flow:-
+Client → GET `/api/orders/{orderId}/status` → H2 Database → Order Status Response
+
+## 9. Failed Events API
+
+### Scenario:-
+Retrieves recorded technical failures for monitoring and investigation.
+
+### Flow:-
+Client → GET `/api/failed-events` → Failed Event Repository → H2 Database → Failed Events Response
+
+## 10. Database Tables
+
+| Table | Purpose |
+|---|---|
+| ORDER_RECORDS | Order details, total amount, and processing statuses |
+| PRODUCT_STOCK | Product prices and available stock |
+| PAYMENT_RECORDS | Submitted payment amounts and payment results |
+| INVENTORY_RECORDS | Inventory reservation details |
+| NOTIFICATION_RECORDS | Notification details |
+| FAILED_EVENT | Technical failure records |
+
+## 11. Kafka Topics
+
+| Topic | Purpose |
+|---|---|
+| order-created-events | Newly created order events |
+| order-finalized-events | Finalized order events |
+| payment-service-dlq | Failed payment events |
+| inventory-service-dlq | Failed inventory events |
+| notification-service-dlq | Failed notification events |
+
+## 12. Key Features
+
+- Event-driven communication using Apache Kafka.
+- REST-based order creation and separate payment submission.
+- Database-based product pricing and payment amount validation.
+- Independent payment and inventory processing.
+- Stock reservation and availability validation.
+- Coordinated final order status determination.
+- Asynchronous email notifications.
+- Duplicate order and payment prevention.
+- Retry mechanism and service-specific Kafka DLQs.
+- Order Status and Failed Events APIs.
+
